@@ -115,6 +115,7 @@ jobs:
           # Optional: custom configuration
           skip_patterns: "[skip release],[no-release]"
           footer: "Custom footer text"
+          generate_release_notes: true  # Add GitHub's automatic release notes
 
       # Optional: publish to PyPI
       # Only run if a new version was created
