@@ -56,8 +56,11 @@ calver-auto-release = "calver_auto_release:cli"
 [tool.hatch.version]
 source = "versioningit"
 
+[tool.hatch.build]
+include = ["calver_auto_release.py"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["calver_auto_release"]
+packages = ["."]
 
 [tool.hatch.build.hooks.versioningit-onbuild]
 build-file = "calver_auto_release.py"
