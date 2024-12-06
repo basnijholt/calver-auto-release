@@ -1,0 +1,117 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "versioningit"]
+
+[project]
+name = "calver-auto-release"
+description = "Automatically create GitHub releases using Calendar Versioning (CalVer)"
+requires-python = ">=3.10"
+dynamic = ["version"]
+maintainers = [{ name = "Bas Nijholt", email = "bas@nijho.lt" }]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = [
+    "gitpython>=3.1.0",
+    "packaging>=23.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "coverage",
+    "pytest-cov",
+    "pytest",
+    "versioningit",
+]
+dev = [
+    "black",
+    "mypy",
+    "pre-commit",
+    "ruff",
+    "versioningit",
+    "calver-auto-release[test]",
+]
+
+[project.urls]
+homepage = "https://github.com/basnijholt/calver-auto-release"
+repository = "https://github.com/basnijholt/calver-auto-release"
+
+[project.readme]
+content-type = "text/markdown"
+file = "README.md"
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.hatch.build.targets.wheel]
+packages = ["calver_auto_release"]
+
+[tool.hatch.build.hooks.versioningit-onbuild]
+build-file = "calver_auto_release.py"
+source-file = "calver_auto_release.py"
+
+[tool.versioningit]
+default-version = "0.0.0"
+
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+default-tag = "0.0.0"
+
+[tool.versioningit.format]
+dirty = "{version}.dev{distance}+{branch}.{vcs}{rev}.dirty"
+distance = "{version}.dev{distance}+{branch}.{vcs}{rev}"
+distance-dirty = "{version}.dev{distance}+{branch}.{vcs}{rev}.dirty"
+
+[tool.pytest.ini_options]
+addopts = """
+-vvv
+--cov=calver_auto_release
+--cov-report term
+--cov-report html
+--cov-report xml
+--cov-fail-under=90
+"""
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "T20",  # flake8-print
+    "S101",  # Use of assert detected
+    "D402",  # First line should not be the function's signature
+    "D401",  # First line of docstring should be in imperative mood
+    "PLW0603",  # Using the global statement to update `X` is discouraged
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["SLF001", "ANN", "D", "PLR2004", "ARG001"]
+".github/*" = ["INP001"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 18
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
