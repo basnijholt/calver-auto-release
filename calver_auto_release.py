@@ -16,6 +16,7 @@ import git
 from packaging import version
 from rich.console import Console
 from rich.panel import Panel
+from rich.syntax import Syntax
 from rich.table import Table
 
 if TYPE_CHECKING:
@@ -74,10 +75,10 @@ def create_release(
 
         new_version = _get_new_version(repo)
         commit_messages = _get_commit_messages_since_last_release(repo)
-        release_notes = _format_release_notes(commit_messages, new_version, footer)
+        release_notes = _format_release_notes(commit_messages, new_version, footer, repo=repo)
 
     # Show release information
-    _display_release_info(new_version, commit_messages.split("\n"), dry_run)
+    _display_release_info(new_version, commit_messages.split("\n"), dry_run, release_notes)
 
     if not dry_run:
         with console.status("[bold green]Creating release..."):
@@ -94,7 +95,12 @@ def create_release(
     return new_version
 
 
-def _display_release_info(version: str, commits: list[str], dry_run: bool) -> None:  # noqa: FBT001
+def _display_release_info(
+    version: str,
+    commits: list[str],
+    dry_run: bool,  # noqa: FBT001
+    release_notes: str,
+) -> None:
     """Display formatted release information."""
     # Create a table for commit messages
     table = Table(title="📝 Commits included in this release")
@@ -113,9 +119,17 @@ def _display_release_info(version: str, commits: list[str], dry_run: bool) -> No
         border_style="blue",
     )
 
+    # Create a panel for release notes with syntax highlighting
+    release_notes_panel = Panel(
+        Syntax(release_notes, "markdown", theme="monokai", line_numbers=False),
+        title="📋 Release Notes Preview",
+        border_style="green",
+    )
+
     # Print everything
     console.print(info_panel)
     console.print(table)
+    console.print(release_notes_panel)
     console.print()
 
 
@@ -183,20 +197,107 @@ def _get_commit_messages_since_last_release(repo: git.Repo) -> str:
         return repo.git.log("--pretty=format:%s")  # type: ignore[no-any-return]
 
 
-def _format_release_notes(commit_messages: str, new_version: str, footer: str) -> str:
-    """Format the release notes.
+def _get_commit_details(repo: git.Repo, since_ref: str | None = None) -> list[tuple[str, str, str]]:
+    """Get detailed commit information since the last release.
+
+    Returns
+    -------
+    list of (hash, author, message) tuples
+
+    """
+    log_format = "--pretty=format:%h|%an|%s"  # hash|author|subject
+    if since_ref is None:
+        log = repo.git.log(log_format)
+    else:
+        log = repo.git.log(f"{since_ref}..HEAD", log_format)
+
+    commits = []
+    for line in log.split("\n"):
+        if line:
+            hash_, author, message = line.split("|", 2)
+            commits.append((hash_, author, message))
+    return commits
+
+
+def _format_release_notes(
+    commit_messages: str,
+    new_version: str,
+    footer: str,
+    *,
+    repo: git.Repo | None = None,
+) -> str:
+    """Format the release notes with enhanced information.
 
     The version number will be displayed without the 'v' prefix in the release notes
     for better readability.
     """
     # Remove 'v' prefix for display in release notes
     display_version = new_version.lstrip("v")
-    header = f"🚀 Release {display_version}\n\n"
-    intro = "📝 This release includes the following changes:\n\n"
-    commit_list = commit_messages.split("\n")
-    formatted_commit_list = [f"- {commit}" for commit in commit_list]
-    commit_section = "\n".join(formatted_commit_list)
-    return f"{header}{intro}{commit_section}{footer}"
+
+    # Get repository URL if available
+    repo_url = ""
+    if repo is not None:
+        try:
+            remote_url = repo.remote("origin").url
+            if remote_url.endswith(".git"):
+                remote_url = remote_url[:-4]
+            if "github.com" in remote_url:
+                repo_url = remote_url.replace("git@github.com:", "https://github.com/")
+        except (git.exc.GitCommandError, ValueError):
+            # Ignore if we can't get the remote URL
+            pass
+
+    # Get detailed commit information if repo is available
+    commits_info = []
+    unique_authors = set()
+    if repo is not None:
+        try:
+            latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
+            commits_info = _get_commit_details(repo, latest_tag.name)
+        except ValueError:  # No tags exist
+            commits_info = _get_commit_details(repo)
+        except git.exc.GitCommandError:
+            # Fallback to simple commit messages if git commands fail
+            commits_info = [("", "", msg) for msg in commit_messages.split("\n") if msg]
+
+        unique_authors = {author for _, author, _ in commits_info}
+
+    # Format the release notes with markdown
+    parts = [
+        f"# Release {display_version}\n",
+        "## 📊 Statistics",
+        f"- 📦 **{len(commits_info)}** commits",
+        f"- 👥 **{len(unique_authors)}** contributors\n",
+    ]
+
+    if unique_authors:
+        parts.extend(
+            [
+                "## 👥 Contributors",
+                ", ".join(
+                    f"@{author.lower().replace(' ', '')}" for author in sorted(unique_authors)
+                ),
+                "",
+            ],
+        )
+
+    parts.append("## 📝 Changes\n")
+
+    # Add commits with links if repo_url is available
+    for hash_, author, message in commits_info:
+        commit_line = f"- {message}"
+        if repo_url and hash_:
+            commit_line = (
+                f"- [{message}]({repo_url}/commit/{hash_}) "
+                f"by @{author.lower().replace(' ', '')}"
+            )
+        parts.append(commit_line)
+
+    # Add footer with markdown formatting
+    if footer:
+        parts.extend(["", "---", footer.lstrip()])
+
+    return "\n".join(parts)
 
 
 def cli() -> None:
