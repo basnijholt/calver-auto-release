@@ -71,12 +71,13 @@ def test_action_execution(
     reason="Only runs on GitHub Actions",
 )
 def test_github_environment() -> None:
-    """Test that the action executes successfully on GitHub Actions."""
-    # This test only runs in the GitHub Actions environment
+    """Test that the action executes in the GitHub Actions environment."""
+    # Verify we're in GitHub Actions
     assert "GITHUB_ACTIONS" in os.environ
-    assert "GITHUB_TOKEN" in os.environ
+    assert "GITHUB_WORKSPACE" in os.environ
+    assert "GITHUB_OUTPUT" in os.environ
 
-    # Verify the action's environment
+    # Verify git is available and initialized
     assert Path("action.yml").exists()
     assert (
         subprocess.run(
@@ -86,6 +87,11 @@ def test_github_environment() -> None:
         ).returncode
         == 0
     )
+
+    # Verify GitHub-specific paths
+    workspace = Path(os.environ["GITHUB_WORKSPACE"])
+    assert workspace.exists()
+    assert (workspace / "action.yml").exists()
 
 
 def test_action_functionality(test_repo: git.Repo) -> None:
