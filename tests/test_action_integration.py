@@ -133,12 +133,14 @@ def test_pypi_install(tmp_path: Path) -> None:
             "-c",
             """
             python -m pip install --upgrade pip
-            if [ -f "pyproject.toml" ]; then
+            # In test environments, install from local directory
+            if [ -f "pyproject.toml" ] && grep -q "name = \"calver-auto-release\"" pyproject.toml; then
               pip install -e .
             else
+              # In production, install from PyPI
               pip install calver-auto-release
             fi
-            """,
+            """,  # noqa: E501
         ],
         cwd=tmp_path,
         capture_output=True,

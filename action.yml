@@ -42,7 +42,7 @@ runs:
       shell: bash
       run: |
         uv venv
-        if [ -f "pyproject.toml" ]; then
+        if [ -f "pyproject.toml" ] && grep -q "name = \"calver-auto-release\"" pyproject.toml; then
           uv pip install -e .
         else
           # In production, install from PyPI
