@@ -136,6 +136,29 @@ The version format follows CalVer: `YYYY.MM.PATCH`
 - `MM`: Current month
 - `PATCH`: Incremental number, resets when year or month changes
 
+### Custom Footer
+
+You can customize the footer text that appears at the end of each release note:
+
+```python
+create_release(
+    footer="\nCustom footer text for all releases"
+)
+```
+
+Or via CLI:
+```bash
+calver-auto-release --footer "Custom footer text"
+```
+
+Or in the GitHub Action:
+```yaml
+- uses: basnijholt/calver-auto-release@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    footer: "Custom footer text"
+```
+
 ## License
 
 MIT License
