@@ -71,6 +71,13 @@ def test_local_install(tmp_path: Path) -> None:
     # Copy action.yml and pyproject.toml to temp directory
     subprocess.run(["cp", "action.yml", "pyproject.toml", str(tmp_path)], check=True)
 
+    # Verify the check works
+    grep_result = subprocess.run(
+        ["grep", "-q", 'name = "calver-auto-release"', "pyproject.toml"],
+        check=True,
+    )
+    assert grep_result.returncode == 0
+
     # Create a dummy git repo
     subprocess.run(["git", "init"], cwd=tmp_path, check=True)
     subprocess.run(
@@ -91,7 +98,7 @@ def test_local_install(tmp_path: Path) -> None:
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=tmp_path, check=True)
 
     # Run the install step from action.yml
-    result = subprocess.run(
+    install_result = subprocess.run(
         [
             "bash",
             "-c",
@@ -109,16 +116,16 @@ def test_local_install(tmp_path: Path) -> None:
         text=True,
         check=False,
     )
-    assert result.returncode == 0
+    assert install_result.returncode == 0
 
     # Verify it installed the local version
-    result = subprocess.run(
+    pip_list_result = subprocess.run(
         ["pip", "list"],
         capture_output=True,
         text=True,
         check=False,
     )
-    assert "calver-auto-release (0.0.0)" in result.stdout
+    assert "calver-auto-release (0.0.0)" in pip_list_result.stdout
 
 
 def test_pypi_install(tmp_path: Path) -> None:

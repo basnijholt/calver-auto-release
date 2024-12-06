@@ -1,17 +1,17 @@
-name: 'CalVer Auto Release'
-description: 'Automatically create GitHub releases using Calendar Versioning (CalVer)'
+name: "CalVer Auto Release"
+description: "Automatically create GitHub releases using Calendar Versioning (CalVer)"
 inputs:
   github_token:
-    description: 'GitHub token for creating releases'
+    description: "GitHub token for creating releases"
     required: true
   skip_patterns:
-    description: 'Comma-separated list of patterns to skip releases'
+    description: "Comma-separated list of patterns to skip releases"
     required: false
-    default: '[skip release],[pre-commit.ci],⬆️ Update'
+    default: "[skip release],[pre-commit.ci],⬆️ Update"
   footer:
-    description: 'Custom footer text for release notes'
+    description: "Custom footer text for release notes"
     required: false
-    default: ''
+    default: ""
 
 runs:
   using: "composite"
@@ -23,7 +23,7 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -56,21 +56,21 @@ runs:
         SKIP_PATTERNS: ${{ inputs.skip_patterns }}
         FOOTER: ${{ inputs.footer }}
       run: |
-        # Convert comma-separated patterns to array
-        IFS=',' read -ra PATTERNS <<< "$SKIP_PATTERNS"
+        # Process skip patterns safely
         PATTERN_ARGS=""
-        for pattern in "${PATTERNS[@]}"; do
-          PATTERN_ARGS="$PATTERN_ARGS --skip-pattern $pattern"
+        echo "$SKIP_PATTERNS" | tr ',' '\n' | while read -r pattern; do
+          # Properly quote the pattern
+          PATTERN_ARGS="$PATTERN_ARGS --skip-pattern \"$pattern\""
         done
 
         # Add footer if provided
         FOOTER_ARG=""
         if [ ! -z "$FOOTER" ]; then
-          FOOTER_ARG="--footer $FOOTER"
+          FOOTER_ARG="--footer \"$FOOTER\""
         fi
 
-        source .venv/bin/activate
-        calver-auto-release $PATTERN_ARGS $FOOTER_ARG
+        # Use eval to properly handle the quoted arguments
+        eval "calver-auto-release $PATTERN_ARGS $FOOTER_ARG"
 
     - name: Create GitHub Release
       if: steps.generate_version.outputs.version != ''
