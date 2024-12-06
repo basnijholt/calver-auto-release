@@ -1,0 +1,33 @@
+name: Test Action
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Test normal release creation
+      - name: Test normal release
+        uses: ./ # Uses the action in the root directory
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Test with custom skip pattern
+      - name: Test with custom skip pattern
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_patterns: "[no-release],[skip]"
+
+      # Test with custom footer
+      - name: Test with custom footer
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          footer: "Custom footer for testing"

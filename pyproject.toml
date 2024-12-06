@@ -21,10 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Version Control :: Git",
 ]
-dependencies = [
-    "gitpython>=3.1.0",
-    "packaging>=23.0",
-]
+dependencies = ["gitpython>=3.1.0", "packaging>=23.0"]
 
 [project.optional-dependencies]
 test = [
@@ -32,6 +29,8 @@ test = [
     "pytest-cov",
     "pytest",
     "versioningit",
+    "PyYAML",       # for parsing action.yml
+
 ]
 dev = [
     "black",
@@ -104,11 +103,11 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "T20",  # flake8-print
-    "S101",  # Use of assert detected
-    "D402",  # First line should not be the function's signature
-    "D401",  # First line of docstring should be in imperative mood
-    "PLW0603",  # Using the global statement to update `X` is discouraged
+    "T20",     # flake8-print
+    "S101",    # Use of assert detected
+    "D402",    # First line should not be the function's signature
+    "D401",    # First line of docstring should be in imperative mood
+    "PLW0603", # Using the global statement to update `X` is discouraged
 ]
 
 [tool.ruff.lint.per-file-ignores]

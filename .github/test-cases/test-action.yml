@@ -1,0 +1,35 @@
+name: Test Cases
+on: push
+
+jobs:
+  test-normal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-skip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create commit to skip
+        run: |
+          git config --global user.name "Test User"
+          git config --global user.email "test@example.com"
+          echo "[skip release] Test" > test.txt
+          git add test.txt
+          git commit -m "[skip release] Test commit"
+      - uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-custom-footer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          footer: "Custom footer"
