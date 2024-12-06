@@ -1,0 +1,117 @@
+# calver-auto-release 🏷️
+[![PyPI](https://img.shields.io/pypi/v/calver-auto-release)](https://pypi.org/project/calver-auto-release/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/calver-auto-release)](https://pypi.org/project/calver-auto-release/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![pytest](https://github.com/basnijholt/calver-auto-release/actions/workflows/test.yml/badge.svg)](https://github.com/basnijholt/calver-auto-release/actions/workflows/test.yml)
+
+🏷️ Automatically create GitHub releases using Calendar Versioning (CalVer) on every commit.
+
+> [!TIP]
+> Use this GitHub Action to automatically create releases with CalVer versioning in your repository!
+
+<details>
+<summary>ToC</summary>
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+- [Features](#features)
+- [Usage](#usage)
+- [GitHub Action](#github-action)
+- [Python API](#python-api)
+- [Installation](#installation)
+- [License](#license)
+- [Contributing](#contributing)
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+</details>
+
+## Features
+- 📅 Automatic Calendar Versioning (YYYY.MM.PATCH)
+- 🤖 Creates GitHub releases automatically
+- 📝 Generates release notes from commit messages
+- 🏷️ Supports release skipping with commit message flags
+- 🔄 Integrates with GitHub Actions
+- 🐍 Can be used as a Python package
+
+## Usage
+
+### GitHub Action
+
+Add this to your workflow file (e.g., `.github/workflows/release.yml`):
+
+```yaml
+name: Create Release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: basnijholt/calver-auto-release@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Python API
+
+```python
+from calver_auto_release import create_release
+
+# Create a new release
+create_release(
+    repo_path=".",  # Path to your git repository
+    skip_patterns=["[skip release]", "[pre-commit.ci]"],  # Optional: patterns to skip release
+)
+```
+
+## Installation
+
+Install using pip:
+```bash
+pip install calver-auto-release
+```
+
+Or using [uv](https://github.com/astral-sh/uv):
+```bash
+uv pip install calver-auto-release
+```
+
+## Configuration
+
+### Skip Release Patterns
+
+You can skip creating a release by including these patterns in your commit message:
+- `[skip release]`
+- `[pre-commit.ci]`
+- `⬆️ Update`
+
+### Version Format
+
+The version format follows CalVer: `YYYY.MM.PATCH`
+- `YYYY`: Current year
+- `MM`: Current month
+- `PATCH`: Incremental number, resets when year or month changes
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development
+
+1. Clone the repository
+2. Install development dependencies:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+3. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
+4. Run tests:
+   ```bash
+   pytest
+   ```
