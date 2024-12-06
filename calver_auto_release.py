@@ -127,12 +127,8 @@ def _create_tag(repo: git.Repo, new_version: str, release_notes: str) -> None:
 
 def _push_tag(repo: git.Repo, new_version: str) -> None:
     """Push the new tag to the remote repository."""
-    try:
-        origin = repo.remote("origin")
-        origin.push(new_version)
-    except ValueError:
-        # When running tests or in local development, we might not have a remote
-        print("No 'origin' remote found, skipping push")
+    origin = repo.remote("origin")
+    origin.push(new_version)
 
 
 def _get_commit_messages_since_last_release(repo: git.Repo) -> str:
