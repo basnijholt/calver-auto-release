@@ -60,7 +60,7 @@ def test_create_release_basic(git_repo: git.Repo) -> None:
     version = create_release(repo_path=git_repo.working_dir)
     assert version is not None
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    assert version == f"{now.year}.{now.month}.0"
+    assert version == f"v{now.year}.{now.month}.0"
     assert version in [tag.name for tag in git_repo.tags]
 
 
@@ -75,7 +75,7 @@ def test_create_release_with_existing_tag(git_repo_with_tag: git.Repo) -> None:
     version = create_release(repo_path=git_repo_with_tag.working_dir)
     assert version is not None
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    assert version == f"{now.year}.{now.month}.1"
+    assert version == f"v{now.year}.{now.month}.1"
 
 
 def test_create_release_skip_patterns(git_repo: git.Repo) -> None:
@@ -96,7 +96,7 @@ def test_create_release_dry_run(git_repo: git.Repo) -> None:
     version = create_release(repo_path=git_repo.working_dir, dry_run=True)
     assert version is not None
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    assert version == f"{now.year}.{now.month}.0"
+    assert version == f"v{now.year}.{now.month}.0"
     assert not git_repo.tags
 
 
@@ -156,7 +156,7 @@ def test_get_new_version_no_tags(git_repo: git.Repo) -> None:
     """Test version generation with no existing tags."""
     version = _get_new_version(git_repo)
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    assert version == f"{now.year}.{now.month}.0"
+    assert version == f"v{now.year}.{now.month}.0"
 
 
 def test_cli(git_repo: git.Repo, capsys: pytest.CaptureFixture) -> None:

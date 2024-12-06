@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""calver-auto-release: Create new release tags with CalVer format."""
+"""calver-auto-release: Create new release tags with CalVer format.
+
+Creates tags in the format vYYYY.MM.PATCH (e.g., v2024.3.1) and corresponding
+GitHub releases with automatically generated release notes.
+"""
 
 from __future__ import annotations
 
@@ -50,8 +54,8 @@ def create_release(
     Returns
     -------
     str | None
-        The new version number if a release was created or would be created (dry_run),
-        None if release was skipped.
+        The new version number (in format vYYYY.MM.PATCH) if a release was created
+        or would be created (dry_run), None if release was skipped.
 
     """
     skip_patterns = skip_patterns or DEFAULT_SKIP_PATTERNS
@@ -127,10 +131,14 @@ def _should_skip_release(repo: git.Repo, skip_patterns: Sequence[str]) -> bool:
 
 
 def _get_new_version(repo: git.Repo) -> str:
-    """Get the new version number."""
+    """Get the new version number.
+
+    Returns a version string in the format vYYYY.MM.PATCH, e.g., v2024.3.1
+    """
     try:
         latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
-        last_version = version.parse(latest_tag.name)
+        # Remove 'v' prefix for version parsing
+        last_version = version.parse(latest_tag.name.lstrip("v"))
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         patch = (
             last_version.micro + 1
@@ -141,7 +149,7 @@ def _get_new_version(repo: git.Repo) -> str:
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         patch = 0
 
-    return f"{now.year}.{now.month}.{patch}"
+    return f"v{now.year}.{now.month}.{patch}"
 
 
 def _set_author(repo: git.Repo) -> None:
@@ -176,8 +184,14 @@ def _get_commit_messages_since_last_release(repo: git.Repo) -> str:
 
 
 def _format_release_notes(commit_messages: str, new_version: str, footer: str) -> str:
-    """Format the release notes."""
-    header = f"🚀 Release {new_version}\n\n"
+    """Format the release notes.
+
+    The version number will be displayed without the 'v' prefix in the release notes
+    for better readability.
+    """
+    # Remove 'v' prefix for display in release notes
+    display_version = new_version.lstrip("v")
+    header = f"🚀 Release {display_version}\n\n"
     intro = "📝 This release includes the following changes:\n\n"
     commit_list = commit_messages.split("\n")
     formatted_commit_list = [f"- {commit}" for commit in commit_list]
