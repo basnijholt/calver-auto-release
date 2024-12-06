@@ -53,7 +53,7 @@ By automatically creating a release on every commit to your main branch, you ens
 </details>
 
 ## Features
-- 📅 Automatic Calendar Versioning (YYYY.MM.PATCH)
+- 📅 Automatic Calendar Versioning (`v{YYYY}.{MM}.{PATCH}`)
 - 🤖 Creates GitHub releases automatically
 - 📝 Generates release notes from commit messages
 - 🏷️ Supports release skipping with commit message flags
