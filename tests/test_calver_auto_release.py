@@ -160,14 +160,20 @@ def test_format_release_notes(git_repo: git.Repo) -> None:
     dummy_file2 = Path(git_repo.working_dir) / "file2.txt"
     dummy_file2.write_text("Second file")
     git_repo.index.add([str(dummy_file2)])
-    git_repo.config_writer().set_value("user", "name", "John Doe").release()
-    git_repo.index.commit("First commit")
+    git_repo.index.commit(
+        "First commit",
+        author=git.Actor("John Doe", "john@example.com"),
+        committer=git.Actor("John Doe", "john@example.com"),
+    )
 
     dummy_file3 = Path(git_repo.working_dir) / "file3.txt"
     dummy_file3.write_text("Third file")
     git_repo.index.add([str(dummy_file3)])
-    git_repo.config_writer().set_value("user", "name", "Jane Doe").release()
-    git_repo.index.commit("Second commit")
+    git_repo.index.commit(
+        "Second commit",
+        author=git.Actor("Jane Doe", "jane@example.com"),
+        committer=git.Actor("Jane Doe", "jane@example.com"),
+    )
 
     notes_with_repo = _format_release_notes(
         commit_messages,
@@ -180,6 +186,7 @@ def test_format_release_notes(git_repo: git.Repo) -> None:
     assert "## 👥 Contributors" in notes_with_repo
     assert "@johndoe" in notes_with_repo
     assert "@janedoe" in notes_with_repo
+    assert "@testuser" in notes_with_repo  # From the initial commit
 
     # Check statistics with actual commits
     assert "**3** commits" in notes_with_repo  # Initial + 2 new commits
