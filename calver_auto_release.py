@@ -10,6 +10,9 @@ from typing import TYPE_CHECKING
 
 import git
 from packaging import version
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -20,6 +23,8 @@ DEFAULT_FOOTER = (
     "\n\n🙏 Thank you for using this project! Please report any issues "
     "or feedback on the GitHub repository."
 )
+
+console = Console()
 
 
 def create_release(
@@ -52,32 +57,62 @@ def create_release(
     skip_patterns = skip_patterns or DEFAULT_SKIP_PATTERNS
     footer = footer or DEFAULT_FOOTER
 
-    repo = git.Repo(repo_path)
+    with console.status("[bold green]Checking repository..."):
+        repo = git.Repo(repo_path)
 
-    if _is_already_tagged(repo):
-        print("Current commit is already tagged!")
-        return None
+        if _is_already_tagged(repo):
+            console.print("[yellow]Current commit is already tagged![/yellow]")
+            return None
 
-    if _should_skip_release(repo, skip_patterns):
-        print("Skipping release due to commit message!")
-        return None
+        if _should_skip_release(repo, skip_patterns):
+            console.print("[yellow]Skipping release due to commit message![/yellow]")
+            return None
 
-    new_version = _get_new_version(repo)
-    commit_messages = _get_commit_messages_since_last_release(repo)
-    release_notes = _format_release_notes(commit_messages, new_version, footer)
+        new_version = _get_new_version(repo)
+        commit_messages = _get_commit_messages_since_last_release(repo)
+        release_notes = _format_release_notes(commit_messages, new_version, footer)
+
+    # Show release information
+    _display_release_info(new_version, commit_messages.split("\n"), dry_run)
 
     if not dry_run:
-        _create_tag(repo, new_version, release_notes)
-        _push_tag(repo, new_version)
+        with console.status("[bold green]Creating release..."):
+            _create_tag(repo, new_version, release_notes)
+            _push_tag(repo, new_version)
 
         # Write the output version to the GITHUB_OUTPUT environment file if it exists
         if "GITHUB_OUTPUT" in os.environ:
             with open(os.environ["GITHUB_OUTPUT"], "a") as f:  # noqa: PTH123
                 f.write(f"version={new_version}\n")
 
-        print(f"Created new tag: {new_version}")
+        console.print(f"[bold green]✨ Created new tag: {new_version}[/bold green]")
 
     return new_version
+
+
+def _display_release_info(version: str, commits: list[str], dry_run: bool) -> None:  # noqa: FBT001
+    """Display formatted release information."""
+    # Create a table for commit messages
+    table = Table(title="📝 Commits included in this release")
+    table.add_column("Commit Message", style="cyan")
+
+    for commit in commits:
+        table.add_row(commit)
+
+    # Create a panel with release information
+    mode = "[yellow]DRY RUN[/yellow]" if dry_run else "[green]RELEASE[/green]"
+    info_panel = Panel(
+        f"[bold]Version:[/bold] {version}\n"
+        f"[bold]Mode:[/bold] {mode}\n"
+        f"[bold]Number of commits:[/bold] {len(commits)}",
+        title="🚀 Release Information",
+        border_style="blue",
+    )
+
+    # Print everything
+    console.print(info_panel)
+    console.print(table)
+    console.print()
 
 
 def _is_already_tagged(repo: git.Repo) -> bool:
@@ -190,15 +225,21 @@ def cli() -> None:
     if "CALVER_DRY_RUN" in os.environ:
         args.dry_run = os.environ["CALVER_DRY_RUN"].lower() == "true"
 
-    version = create_release(
-        repo_path=args.repo_path,
-        skip_patterns=args.skip_pattern,
-        footer=args.footer,
-        dry_run=args.dry_run,
-    )
+    try:
+        version = create_release(
+            repo_path=args.repo_path,
+            skip_patterns=args.skip_pattern,
+            footer=args.footer,
+            dry_run=args.dry_run,
+        )
 
-    if version and args.dry_run:
-        print(f"Would create new tag: {version}")
+        if version and args.dry_run:
+            console.print(
+                f"[yellow]Would create new tag:[/yellow] [bold cyan]{version}[/bold cyan]",
+            )
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e!s}")
+        raise
 
 
 if __name__ == "__main__":
