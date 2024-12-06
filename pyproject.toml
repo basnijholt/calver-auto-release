@@ -50,6 +50,9 @@ repository = "https://github.com/basnijholt/calver-auto-release"
 content-type = "text/markdown"
 file = "README.md"
 
+[project.scripts]
+calver-auto-release = "calver_auto_release:cli"
+
 [tool.hatch.version]
 source = "versioningit"
 
@@ -106,7 +109,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["SLF001", "ANN", "D", "PLR2004", "ARG001"]
+"tests/*" = ["SLF001", "ANN", "D", "PLR2004", "ARG001", "S603", "S607"]
 ".github/*" = ["INP001"]
 
 [tool.ruff.lint.mccabe]

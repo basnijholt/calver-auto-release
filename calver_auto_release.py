@@ -1,14 +1,19 @@
+#!/usr/bin/env python3
 """calver-auto-release: Create new release tags with CalVer format."""
+
 from __future__ import annotations
 
 import datetime
 import operator
 import os
-from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import git
 from packaging import version
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
 
 DEFAULT_SKIP_PATTERNS = ["[skip release]", "[pre-commit.ci]", "⬆️ Update"]
 DEFAULT_FOOTER = (
@@ -42,35 +47,36 @@ def create_release(
     str | None
         The new version number if a release was created or would be created (dry_run),
         None if release was skipped.
+
     """
     skip_patterns = skip_patterns or DEFAULT_SKIP_PATTERNS
     footer = footer or DEFAULT_FOOTER
-    
+
     repo = git.Repo(repo_path)
-    
+
     if _is_already_tagged(repo):
         print("Current commit is already tagged!")
         return None
-    
+
     if _should_skip_release(repo, skip_patterns):
         print("Skipping release due to commit message!")
         return None
-    
+
     new_version = _get_new_version(repo)
     commit_messages = _get_commit_messages_since_last_release(repo)
     release_notes = _format_release_notes(commit_messages, new_version, footer)
-    
+
     if not dry_run:
         _create_tag(repo, new_version, release_notes)
         _push_tag(repo, new_version)
-        
+
         # Write the output version to the GITHUB_OUTPUT environment file if it exists
         if "GITHUB_OUTPUT" in os.environ:
-            with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            with open(os.environ["GITHUB_OUTPUT"], "a") as f:  # noqa: PTH123
                 f.write(f"version={new_version}\n")
-        
+
         print(f"Created new tag: {new_version}")
-    
+
     return new_version
 
 
@@ -99,7 +105,7 @@ def _get_new_version(repo: git.Repo) -> str:
     except ValueError:  # No tags exist
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         patch = 0
-    
+
     return f"{now.year}.{now.month}.{patch}"
 
 
@@ -121,17 +127,21 @@ def _create_tag(repo: git.Repo, new_version: str, release_notes: str) -> None:
 
 def _push_tag(repo: git.Repo, new_version: str) -> None:
     """Push the new tag to the remote repository."""
-    origin = repo.remote("origin")
-    origin.push(new_version)
+    try:
+        origin = repo.remote("origin")
+        origin.push(new_version)
+    except ValueError:
+        # When running tests or in local development, we might not have a remote
+        print("No 'origin' remote found, skipping push")
 
 
 def _get_commit_messages_since_last_release(repo: git.Repo) -> str:
     """Get the commit messages since the last release."""
     try:
         latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
-        return repo.git.log(f"{latest_tag}..HEAD", "--pretty=format:%s")
+        return repo.git.log(f"{latest_tag}..HEAD", "--pretty=format:%s")  # type: ignore[no-any-return]
     except ValueError:  # No tags exist
-        return repo.git.log("--pretty=format:%s")
+        return repo.git.log("--pretty=format:%s")  # type: ignore[no-any-return]
 
 
 def _format_release_notes(commit_messages: str, new_version: str, footer: str) -> str:
@@ -147,7 +157,7 @@ def _format_release_notes(commit_messages: str, new_version: str, footer: str) -
 def cli() -> None:
     """Command-line interface for calver-auto-release."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Create a new release with CalVer format.")
     parser.add_argument(
         "--repo-path",
@@ -158,7 +168,7 @@ def cli() -> None:
     parser.add_argument(
         "--skip-pattern",
         action="append",
-        help="Pattern to check in commit messages to skip release (can be specified multiple times)",
+        help="Pattern to check in commit messages to skip release (can be specified multiple times)",  # noqa: E501
     )
     parser.add_argument(
         "--footer",
@@ -170,16 +180,16 @@ def cli() -> None:
         action="store_true",
         help="Only show what would be done without creating the release",
     )
-    
+
     args = parser.parse_args()
-    
+
     version = create_release(
         repo_path=args.repo_path,
         skip_patterns=args.skip_pattern,
         footer=args.footer,
         dry_run=args.dry_run,
     )
-    
+
     if version and args.dry_run:
         print(f"Would create new tag: {version}")
 

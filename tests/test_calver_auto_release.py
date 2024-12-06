@@ -1,11 +1,11 @@
 """Tests for calver-auto-release."""
+
 from __future__ import annotations
 
 import datetime
 import os
 import subprocess
 from pathlib import Path
-from typing import Generator
 from unittest.mock import patch
 
 import git
@@ -22,31 +22,31 @@ from calver_auto_release import (
 )
 
 
-@pytest.fixture
-def git_repo(tmp_path: Path) -> Generator[git.Repo, None, None]:
+@pytest.fixture  # type: ignore[misc]
+def git_repo(tmp_path: Path) -> git.Repo:
     """Create a temporary git repository."""
     repo = git.Repo.init(tmp_path)
-    
+
     # Configure git user
     repo.config_writer().set_value("user", "name", "Test User").release()
     repo.config_writer().set_value("user", "email", "test@example.com").release()
-    
+
     # Create and commit a dummy file
     dummy_file = tmp_path / "dummy.txt"
     dummy_file.write_text("Hello, World!")
     repo.index.add([str(dummy_file)])
     repo.index.commit("Initial commit")
-    
+
     # Create a fake remote
     remote_path = tmp_path / "remote"
     remote_path.mkdir()
     git.Repo.init(remote_path, bare=True)
     repo.create_remote("origin", url=str(remote_path))
-    
-    yield repo
+
+    return repo
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def git_repo_with_tag(git_repo: git.Repo) -> git.Repo:
     """Create a temporary git repository with a tag."""
     now = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -71,7 +71,7 @@ def test_create_release_with_existing_tag(git_repo_with_tag: git.Repo) -> None:
     dummy_file.write_text("New file")
     git_repo_with_tag.index.add([str(dummy_file)])
     git_repo_with_tag.index.commit("Second commit")
-    
+
     version = create_release(repo_path=git_repo_with_tag.working_dir)
     assert version is not None
     now = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -85,7 +85,7 @@ def test_create_release_skip_patterns(git_repo: git.Repo) -> None:
     dummy_file.write_text("New file")
     git_repo.index.add([str(dummy_file)])
     git_repo.index.commit("[skip release] Skip this release")
-    
+
     version = create_release(repo_path=git_repo.working_dir)
     assert version is None
     assert not git_repo.tags
@@ -122,7 +122,7 @@ def test_create_release_custom_skip_patterns(git_repo: git.Repo) -> None:
     dummy_file.write_text("New file")
     git_repo.index.add([str(dummy_file)])
     git_repo.index.commit("[custom-skip] Skip this release")
-    
+
     version = create_release(
         repo_path=git_repo.working_dir,
         skip_patterns=["[custom-skip]"],
@@ -163,7 +163,7 @@ def test_cli(git_repo: git.Repo, capsys: pytest.CaptureFixture) -> None:
     """Test CLI interface."""
     with patch("sys.argv", ["calver-auto-release", "--repo-path", git_repo.working_dir]):
         cli()
-    
+
     captured = capsys.readouterr()
     assert "Created new tag:" in captured.out
     assert git_repo.tags
@@ -176,7 +176,7 @@ def test_cli_dry_run(git_repo: git.Repo, capsys: pytest.CaptureFixture) -> None:
         ["calver-auto-release", "--repo-path", git_repo.working_dir, "--dry-run"],
     ):
         cli()
-    
+
     captured = capsys.readouterr()
     assert "Would create new tag:" in captured.out
     assert not git_repo.tags
@@ -189,7 +189,7 @@ def test_cli_skip_pattern(git_repo: git.Repo) -> None:
     dummy_file.write_text("New file")
     git_repo.index.add([str(dummy_file)])
     git_repo.index.commit("[custom-skip] Skip this release")
-    
+
     with patch(
         "sys.argv",
         [
@@ -201,7 +201,7 @@ def test_cli_skip_pattern(git_repo: git.Repo) -> None:
         ],
     ):
         cli()
-    
+
     assert not git_repo.tags
 
 
@@ -210,7 +210,7 @@ def test_github_environment(git_repo: git.Repo, tmp_path: Path) -> None:
     github_output = tmp_path / "github_output"
     with patch.dict(os.environ, {"GITHUB_OUTPUT": str(github_output)}):
         version = create_release(repo_path=git_repo.working_dir)
-    
+
     assert version is not None
     assert github_output.exists()
     assert f"version={version}" in github_output.read_text()
@@ -223,10 +223,10 @@ def test_real_git_operations(tmp_path: Path) -> None:
     repo_path.mkdir()
     remote_path = tmp_path / "remote"
     remote_path.mkdir()
-    
+
     # Initialize bare remote repository
     subprocess.run(["git", "init", "--bare"], cwd=remote_path, check=True)
-    
+
     # Initialize local repository
     subprocess.run(["git", "init"], cwd=repo_path, check=True)
     subprocess.run(
@@ -239,14 +239,14 @@ def test_real_git_operations(tmp_path: Path) -> None:
         cwd=repo_path,
         check=True,
     )
-    
+
     # Add remote
     subprocess.run(
         ["git", "remote", "add", "origin", str(remote_path)],
         cwd=repo_path,
         check=True,
     )
-    
+
     # Create and commit a file
     test_file = repo_path / "test.txt"
     test_file.write_text("Hello, World!")
@@ -256,11 +256,11 @@ def test_real_git_operations(tmp_path: Path) -> None:
         cwd=repo_path,
         check=True,
     )
-    
+
     # Run the CLI
     with patch("sys.argv", ["calver-auto-release", "--repo-path", str(repo_path)]):
         cli()
-    
+
     # Verify the tag was created
     result = subprocess.run(
         ["git", "tag"],
