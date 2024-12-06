@@ -6,8 +6,27 @@
 
 🏷️ Automatically create GitHub releases using Calendar Versioning (CalVer) on every commit.
 
-> [!TIP]
-> Use this GitHub Action to automatically create releases with CalVer versioning in your repository!
+This tool is perfect for:
+- 📦 Packages where users should always use the latest version
+- 🔬 Research software where releases are not tied to specific feature completions
+- 🔄 Projects with continuous deployment where each merge to main is a potential release
+- 🤖 Automating away the decision of "when should we release?"
+
+By automatically creating a release on every commit to your main branch, you ensure that:
+1. Users always have access to the latest changes
+2. Version numbers clearly indicate when changes were made
+3. Each change is properly documented through commit messages
+4. The release process is completely automated
+
+> [!NOTE]
+> For the best experience, we recommend using **squash merges** for your Pull Requests.
+> This ensures that:
+> - Each release corresponds to one logical change
+> - Release notes are clean and meaningful
+> - The git history remains linear and easy to understand
+>
+> Configure this in your GitHub repository settings under "Pull Requests" → "Allow squash merging" and uncheck other merge methods.
+
 
 <details>
 <summary>ToC</summary>
