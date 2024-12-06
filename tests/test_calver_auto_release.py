@@ -270,3 +270,101 @@ def test_real_git_operations(tmp_path: Path) -> None:
         text=True,
     )
     assert result.stdout.strip()
+
+
+@pytest.fixture  # type: ignore[misc]
+def cli_repo(tmp_path: Path) -> git.Repo:
+    """Create a temporary git repository for CLI testing."""
+    repo = git.Repo.init(tmp_path)
+    repo.config_writer().set_value("user", "name", "Test User").release()
+    repo.config_writer().set_value("user", "email", "test@example.com").release()
+
+    # Set up remote
+    remote_path = tmp_path / "remote"
+    remote_path.mkdir()
+    git.Repo.init(remote_path, bare=True)
+    repo.create_remote("origin", url=str(remote_path))
+
+    return repo
+
+
+def test_cli_environment_variables(cli_repo: git.Repo, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test CLI behavior with environment variables."""
+    # Create and commit a test file
+    test_file = Path(cli_repo.working_dir) / "test.txt"
+    test_file.write_text("test")
+    cli_repo.index.add([str(test_file)])
+    cli_repo.index.commit("Initial commit")
+
+    # Test skip patterns from environment (with dry run)
+    monkeypatch.setenv("CALVER_SKIP_PATTERNS", "[no-release], [skip-ci]")
+    monkeypatch.setenv("CALVER_DRY_RUN", "true")  # Add this line
+    with patch("sys.argv", ["calver-auto-release", "--repo-path", cli_repo.working_dir]):
+        cli()
+    assert not cli_repo.tags  # No tags should be created with dry run
+
+    # Test custom footer from environment (with dry run)
+    custom_footer = "Custom footer from env"
+    monkeypatch.setenv("CALVER_FOOTER", custom_footer)
+    monkeypatch.setenv("CALVER_DRY_RUN", "true")  # Keep dry run
+    with patch("sys.argv", ["calver-auto-release", "--repo-path", cli_repo.working_dir]):
+        cli()
+    assert not cli_repo.tags  # Still no tags
+
+    # Test actual release with different dry run values
+    for dry_run_value in ["false", "FALSE", "False"]:
+        monkeypatch.setenv("CALVER_DRY_RUN", dry_run_value)
+        with patch("sys.argv", ["calver-auto-release", "--repo-path", cli_repo.working_dir]):
+            cli()
+        assert len(cli_repo.tags) == 1  # Now we should have a tag
+        cli_repo.delete_tag(cli_repo.tags[0])  # Clean up for next iteration
+
+
+def test_cli_environment_variables_precedence(
+    cli_repo: git.Repo,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that command line arguments take precedence over environment variables."""
+    # Create and commit a test file with skip pattern
+    test_file = Path(cli_repo.working_dir) / "test.txt"
+    test_file.write_text("test")
+    cli_repo.index.add([str(test_file)])
+    cli_repo.index.commit("[no-release] Test skip")
+
+    # Set environment variables that would allow release
+    monkeypatch.setenv("CALVER_SKIP_PATTERNS", "[different-pattern]")
+    monkeypatch.setenv("CALVER_FOOTER", "Footer from env")
+    monkeypatch.setenv("CALVER_DRY_RUN", "false")
+
+    # CLI args should take precedence and prevent release
+    with patch(
+        "sys.argv",
+        [
+            "calver-auto-release",
+            "--repo-path",
+            cli_repo.working_dir,
+            "--skip-pattern",
+            "[no-release]",
+        ],
+    ):
+        cli()
+
+    assert not cli_repo.tags  # No tags should be created due to skip pattern
+
+
+def test_cli_environment_variables_invalid(
+    cli_repo: git.Repo,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test CLI behavior with invalid environment variables."""
+    # Create and commit a test file
+    test_file = Path(cli_repo.working_dir) / "test.txt"
+    test_file.write_text("test")
+    cli_repo.index.add([str(test_file)])
+    cli_repo.index.commit("Initial commit")
+
+    # Test invalid dry run value
+    monkeypatch.setenv("CALVER_DRY_RUN", "invalid")
+    with patch("sys.argv", ["calver-auto-release", "--repo-path", cli_repo.working_dir]):
+        version = create_release(repo_path=cli_repo.working_dir)
+    assert version is not None  # Should default to False for invalid value

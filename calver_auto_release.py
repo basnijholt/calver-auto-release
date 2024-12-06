@@ -228,15 +228,15 @@ def cli() -> None:
 
     args = parser.parse_args()
 
-    # Check environment variables for GitHub Action usage
-    if "CALVER_SKIP_PATTERNS" in os.environ:
+    # Handle environment variables if CLI args are not set
+    if args.skip_pattern is None and "CALVER_SKIP_PATTERNS" in os.environ:
         skip_patterns = os.environ["CALVER_SKIP_PATTERNS"].split(",")
         args.skip_pattern = [p.strip() for p in skip_patterns]
 
-    if "CALVER_FOOTER" in os.environ:
+    if args.footer is None and "CALVER_FOOTER" in os.environ:
         args.footer = os.environ["CALVER_FOOTER"]
 
-    if "CALVER_DRY_RUN" in os.environ:
+    if not args.dry_run and "CALVER_DRY_RUN" in os.environ:
         args.dry_run = os.environ["CALVER_DRY_RUN"].lower() == "true"
 
     try:
