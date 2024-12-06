@@ -12,6 +12,10 @@ inputs:
     description: "Custom footer text for release notes"
     required: false
     default: ""
+  dry_run:
+    description: 'Run in dry-run mode (no actual releases created)'
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -55,27 +59,13 @@ runs:
       env:
         SKIP_PATTERNS: ${{ inputs.skip_patterns }}
         FOOTER: ${{ inputs.footer }}
+        CALVER_DRY_RUN: ${{ inputs.dry_run }}
       run: |
-        # Process skip patterns safely
-        PATTERN_ARGS=""
-        echo "$SKIP_PATTERNS" | tr ',' '\n' | while read -r pattern; do
-          # Properly quote the pattern
-          PATTERN_ARGS="$PATTERN_ARGS --skip-pattern \"$pattern\""
-        done
-
-        # Add footer if provided
-        FOOTER_ARG=""
-        if [ ! -z "$FOOTER" ]; then
-          FOOTER_ARG="--footer \"$FOOTER\""
-        fi
-
-        # Active the uv venv
         source .venv/bin/activate
-        # Use eval to properly handle the quoted arguments
-        eval "calver-auto-release $PATTERN_ARGS $FOOTER_ARG"
+        calver-auto-release
 
     - name: Create GitHub Release
-      if: steps.generate_version.outputs.version != ''
+      if: steps.generate_version.outputs.version != '' && inputs.dry_run != 'true'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.generate_version.outputs.version }}

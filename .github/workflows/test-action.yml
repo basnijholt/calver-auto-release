@@ -12,11 +12,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Test normal release creation
+      # Test normal release in dry-run mode
       - name: Test normal release
-        uses: ./ # Uses the action in the root directory
+        uses: ./
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true  # Add this parameter to action.yml
 
       # Test with custom skip pattern
       - name: Test with custom skip pattern
@@ -24,6 +25,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           skip_patterns: "[no-release],[skip]"
+          dry_run: true
 
       # Test with custom footer
       - name: Test with custom footer
@@ -31,3 +33,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           footer: "Custom footer for testing"
+          dry_run: true
