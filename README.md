@@ -69,6 +69,9 @@ By automatically creating a release on every commit to your main branch, you ens
 
 Add this to your workflow file (e.g., `.github/workflows/release.yml`):
 
+> [!NOTE]
+> See the [`basnijholt/home-assistant-streamdeck-yaml`'s `release.yml` workflow](https://github.com/basnijholt/home-assistant-streamdeck-yaml/blob/main/.github/workflows/release.yml)'s for a full example, and see it's [releases page](https://github.com/basnijholt/home-assistant-streamdeck-yaml/releases) for the result.
+
 ```yaml
 name: Create Release
 on:
