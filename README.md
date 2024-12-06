@@ -72,6 +72,25 @@ Add this to your workflow file (e.g., `.github/workflows/release.yml`):
 > [!NOTE]
 > See the [`basnijholt/home-assistant-streamdeck-yaml`'s `release.yml` workflow](https://github.com/basnijholt/home-assistant-streamdeck-yaml/blob/main/.github/workflows/release.yml)'s for a full example, and see it's [releases page](https://github.com/basnijholt/home-assistant-streamdeck-yaml/releases) for the result.
 
+A minimal example:
+
+```yaml
+name: Create Release
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: basnijholt/calver-auto-release@v1
+        id: release
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+And full example including publishing to PyPI:
+
 ```yaml
 name: Create Release
 on:
