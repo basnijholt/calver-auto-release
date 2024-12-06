@@ -1,0 +1,77 @@
+name: 'CalVer Auto Release'
+description: 'Automatically create GitHub releases using Calendar Versioning (CalVer)'
+inputs:
+  github_token:
+    description: 'GitHub token for creating releases'
+    required: true
+  skip_patterns:
+    description: 'Comma-separated list of patterns to skip releases'
+    required: false
+    default: '[skip release],[pre-commit.ci],⬆️ Update'
+  footer:
+    description: 'Custom footer text for release notes'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+
+    - name: Configure Git
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@users.noreply.github.com"
+        git config --global credential.helper store
+        echo "https://$GITHUB_TOKEN:@github.com" > ~/.git-credentials
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        uv venv
+        uv pip install calver-auto-release
+
+    - name: Generate new version
+      shell: bash
+      id: generate_version
+      env:
+        SKIP_PATTERNS: ${{ inputs.skip_patterns }}
+        FOOTER: ${{ inputs.footer }}
+      run: |
+        # Convert comma-separated patterns to array
+        IFS=',' read -ra PATTERNS <<< "$SKIP_PATTERNS"
+        PATTERN_ARGS=""
+        for pattern in "${PATTERNS[@]}"; do
+          PATTERN_ARGS="$PATTERN_ARGS --skip-pattern $pattern"
+        done
+
+        # Add footer if provided
+        FOOTER_ARG=""
+        if [ ! -z "$FOOTER" ]; then
+          FOOTER_ARG="--footer $FOOTER"
+        fi
+
+        source .venv/bin/activate
+        calver-auto-release $PATTERN_ARGS $FOOTER_ARG
+
+    - name: Create GitHub Release
+      if: steps.generate_version.outputs.version != ''
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.generate_version.outputs.version }}
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}

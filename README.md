@@ -60,16 +60,53 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # Create release with CalVer
       - uses: basnijholt/calver-auto-release@v1
+        id: release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: custom configuration
+          skip_patterns: "[skip release],[no-release]"
+          footer: "Custom footer text"
+
+      # Optional: publish to PyPI
+      # Only run if a new version was created
+      - name: Build package
+        if: steps.release.outputs.version != ''
+        run: |
+          python -m pip install build
+          python -m build
+
+      # Option 1: Publish with official PyPA action
+      - name: Publish package distributions to PyPI
+        if: steps.release.outputs.version != ''
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      # Option 2: Publish with twine
+      # - name: Publish package distributions to PyPI
+      #   if: steps.release.outputs.version != ''
+      #   env:
+      #     TWINE_USERNAME: __token__
+      #     TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      #   run: |
+      #     python -m pip install twine
+      #     twine upload dist/*
 ```
 
-You can customize the action with these inputs:
-- `github_token`: Required. The GitHub token to create releases
-- `skip_patterns`: Optional. Comma-separated list of patterns to skip releases
-- `footer`: Optional. Custom footer text for release notes
+The action creates a new release with CalVer versioning, and you can optionally add your preferred method for publishing to PyPI or any other post-release tasks.
 
+> [!IMPORTANT]
+> The `secrets.GITHUB_TOKEN` variable is automatically populated (see [docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication)).
+> However, releases created using `GITHUB_TOKEN` will not trigger other workflows that run on the `release` event.
+> If you need to trigger other workflows when a release is created, you'll need to:
+> 1. Create a Personal Access Token (PAT) with `contents: write` permissions at https://github.com/settings/tokens
+> 2. Add it to your repository secrets (e.g., as `PAT`)
+> 3. Use it in the workflow:
+>    ```yaml
+>    - uses: basnijholt/calver-auto-release@v1
+>      with:
+>        github_token: ${{ secrets.PAT }}  # Instead of secrets.GITHUB_TOKEN
+>    ```
 
 ### CLI Usage
 ```bash
