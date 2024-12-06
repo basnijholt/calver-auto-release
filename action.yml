@@ -69,6 +69,8 @@ runs:
           FOOTER_ARG="--footer \"$FOOTER\""
         fi
 
+        # Active the uv venv
+        source .venv/bin/activate
         # Use eval to properly handle the quoted arguments
         eval "calver-auto-release $PATTERN_ARGS $FOOTER_ARG"
 
