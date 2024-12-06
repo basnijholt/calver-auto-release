@@ -251,7 +251,7 @@ def cli() -> None:
             console.print(
                 f"[yellow]Would create new tag:[/yellow] [bold cyan]{version}[/bold cyan]",
             )
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         console.print(f"[bold red]Error:[/bold red] {e!s}")
         raise
 
