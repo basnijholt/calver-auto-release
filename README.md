@@ -30,6 +30,9 @@
 - 🏷️ Supports release skipping with commit message flags
 - 🔄 Integrates with GitHub Actions
 - 🐍 Can be used as a Python package
+- 🖥️ Command-line interface included
+- 🧪 Dry-run mode for testing
+- 📋 Customizable release notes format
 
 ## Usage
 
@@ -52,17 +55,58 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Python API
+You can customize the action with these inputs:
+- `github_token`: Required. The GitHub token to create releases
+- `skip_patterns`: Optional. Comma-separated list of patterns to skip releases
+- `footer`: Optional. Custom footer text for release notes
 
+
+### CLI Usage
+```bash
+# Basic usage
+calver-auto-release --repo-path /path/to/repo
+
+# Dry run (show what would happen without creating the release)
+calver-auto-release --repo-path /path/to/repo --dry-run
+
+# Custom skip patterns
+calver-auto-release --repo-path /path/to/repo --skip-pattern "[no-release]" --skip-pattern "[skip]"
+```
+
+### Python API
 ```python
 from calver_auto_release import create_release
 
-# Create a new release
+# Basic usage
+create_release()  # Uses current directory
+
+# With custom configuration
 create_release(
-    repo_path=".",  # Path to your git repository
-    skip_patterns=["[skip release]", "[pre-commit.ci]"],  # Optional: patterns to skip release
+    repo_path="/path/to/repo",
+    skip_patterns=["[skip]", "[no-release]"],
+    footer="\nCustom footer text",
+    dry_run=True,  # Show what would happen without creating the release
 )
 ```
+
+### Release Notes Format
+The generated release notes will have this format:
+```
+🚀 Release YYYY.MM.PATCH
+
+📝 This release includes the following changes:
+
+- First commit message
+- Second commit message
+- etc.
+
+🙏 Thank you for using this project! Please report any issues or feedback on the GitHub repository
+```
+
+### Requirements
+- Git repository with an 'origin' remote configured
+- Python 3.10 or higher
+- Git command-line tools installed
 
 ## Installation
 
