@@ -16,6 +16,10 @@ inputs:
     description: 'Run in dry-run mode (no actual releases created)'
     required: false
     default: 'false'
+  generate_release_notes:
+    description: "Generate release notes using GitHub's automatic release notes generation"
+    required: false
+    default: 'true'
 
 outputs:
   version:
@@ -74,6 +78,6 @@ runs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.generate_version.outputs.version }}
-        generate_release_notes: false
+        generate_release_notes: ${{ inputs.generate_release_notes }}
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
