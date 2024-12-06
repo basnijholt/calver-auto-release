@@ -179,7 +179,11 @@ def _set_author(repo: git.Repo) -> None:
 def _create_tag(repo: git.Repo, new_version: str, release_notes: str) -> None:
     """Create a new tag."""
     _set_author(repo)
-    repo.create_tag(new_version, message=f"Release {new_version}\n\n{release_notes}")
+    repo.create_tag(
+        new_version,
+        message=f"Release {new_version}\n\n{release_notes}",
+        cleanup="verbatim",
+    )
 
 
 def _push_tag(repo: git.Repo, new_version: str) -> None:
