@@ -277,17 +277,6 @@ def _format_release_notes(
         f"- 👥 **{len(unique_authors)}** contributors\n",
     ]
 
-    if unique_authors:
-        parts.extend(
-            [
-                "## 👥 Contributors",
-                ", ".join(
-                    f"@{author.lower().replace(' ', '')}" for author in sorted(unique_authors)
-                ),
-                "",
-            ],
-        )
-
     parts.append("## 📝 Changes\n")
 
     # Add commits with links if repo_url is available
@@ -299,6 +288,17 @@ def _format_release_notes(
                 f"by @{author.lower().replace(' ', '')}"
             )
         parts.append(commit_line)
+
+    if unique_authors:
+        parts.extend(
+            [
+                "## 👥 Contributors",
+                ", ".join(
+                    f"@{author.lower().replace(' ', '')}" for author in sorted(unique_authors)
+                ),
+                "",
+            ],
+        )
 
     # Add footer with markdown formatting
     if footer:
