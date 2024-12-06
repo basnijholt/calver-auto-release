@@ -64,3 +64,95 @@ def test_action_yml_structure() -> None:
 
     # Verify it's a composite action
     assert action["runs"]["using"] == "composite"
+
+
+def test_local_install(tmp_path: Path) -> None:
+    """Test that the action installs from local directory when available."""
+    # Copy action.yml and pyproject.toml to temp directory
+    subprocess.run(["cp", "action.yml", "pyproject.toml", str(tmp_path)], check=True)
+
+    # Create a dummy git repo
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    # Create a test file and commit it
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+    subprocess.run(["git", "add", "test.txt"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=tmp_path, check=True)
+
+    # Run the install step from action.yml
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            """
+            python -m pip install --upgrade pip
+            if [ -f "pyproject.toml" ]; then
+              pip install -e .
+            else
+              pip install calver-auto-release
+            fi
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+
+    # Verify it installed the local version
+    result = subprocess.run(
+        ["pip", "list"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "calver-auto-release (0.0.0)" in result.stdout
+
+
+def test_pypi_install(tmp_path: Path) -> None:
+    """Test that the action installs from PyPI when no local version available."""
+    # Copy only action.yml to temp directory
+    subprocess.run(["cp", "action.yml", str(tmp_path)], check=True)
+
+    # Run the install step from action.yml
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            """
+            python -m pip install --upgrade pip
+            if [ -f "pyproject.toml" ]; then
+              pip install -e .
+            else
+              pip install calver-auto-release
+            fi
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+
+    # Verify it installed from PyPI
+    result = subprocess.run(
+        ["pip", "show", "calver-auto-release"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "Location:" in result.stdout
+    assert ".local/lib/python" in result.stdout
