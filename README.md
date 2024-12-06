@@ -81,6 +81,12 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment:  # Needed for `pypa/gh-action-pypi-publish`
+      name: pypi
+      url: https://pypi.org/p/${{ github.repository }}
+    permissions:  # Needed for `pypa/gh-action-pypi-publish`
+      contents: write  # Add this permission for creating tags and releases
+      id-token: write  # Keep this for PyPI publishing
     steps:
       # Create release with CalVer
       - uses: basnijholt/calver-auto-release@v1
