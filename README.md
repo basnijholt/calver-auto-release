@@ -13,13 +13,23 @@
 <summary>ToC</summary>
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 - [Features](#features)
 - [Usage](#usage)
-- [GitHub Action](#github-action)
-- [Python API](#python-api)
+  - [GitHub Action](#github-action)
+  - [CLI Usage](#cli-usage)
+  - [Python API](#python-api)
+  - [Release Notes Format](#release-notes-format)
+  - [Requirements](#requirements)
 - [Installation](#installation)
+- [Configuration](#configuration)
+  - [Skip Release Patterns](#skip-release-patterns)
+  - [Version Format](#version-format)
+  - [Custom Footer](#custom-footer)
 - [License](#license)
 - [Contributing](#contributing)
+  - [Development](#development)
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 </details>
 
