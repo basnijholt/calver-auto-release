@@ -16,10 +16,10 @@ inputs:
     description: 'Run in dry-run mode (no actual releases created)'
     required: false
     default: 'false'
-  generate_release_notes:
-    description: "Generate release notes using GitHub's automatic release notes generation"
+  release_notes_type:
+    description: "Source of release notes: 'github' for GitHub's auto-generated notes or 'tag_message' to use the tag message"
     required: false
-    default: 'true'
+    default: 'tag_message'
 
 outputs:
   version:
@@ -73,11 +73,21 @@ runs:
         source .venv/bin/activate
         calver-auto-release
 
+    - name: Get Tag Message
+      if: steps.generate_version.outputs.version != '' && inputs.dry_run != 'true' && inputs.release_notes_type == 'tag_message'
+      shell: bash
+      id: tag_message
+      run: |
+        echo "content<<EOF" >> $GITHUB_OUTPUT
+        git tag -l --format='%(contents:body)' ${{ steps.generate_version.outputs.version }} >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Create GitHub Release
       if: steps.generate_version.outputs.version != '' && inputs.dry_run != 'true'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.generate_version.outputs.version }}
-        generate_release_notes: ${{ inputs.generate_release_notes }}
+        generate_release_notes: ${{ inputs.release_notes_type == 'github' }}
+        body: ${{ inputs.release_notes_type == 'tag_message' && steps.tag_message.outputs.content || '' }}
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
