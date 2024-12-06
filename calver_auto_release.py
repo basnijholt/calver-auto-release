@@ -259,8 +259,11 @@ def _format_release_notes(
         except git.exc.GitCommandError:
             # Fallback to simple commit messages if git commands fail
             commits_info = [("", "", msg) for msg in commit_messages.split("\n") if msg]
+    else:
+        # Use simple commit messages when no repo is provided
+        commits_info = [("", "", msg) for msg in commit_messages.split("\n") if msg]
 
-        unique_authors = {author for _, author, _ in commits_info}
+    unique_authors = {author for _, author, _ in commits_info if author}
 
     # Format the release notes with markdown
     parts = [

@@ -131,15 +131,59 @@ def test_create_release_custom_skip_patterns(git_repo: git.Repo) -> None:
     assert not git_repo.tags
 
 
-def test_format_release_notes() -> None:
+def test_format_release_notes(git_repo: git.Repo) -> None:
     """Test release notes formatting."""
+    # First test without repo
     commit_messages = "First commit\nSecond commit"
     version = "2024.1.0"
     notes = _format_release_notes(commit_messages, version, DEFAULT_FOOTER)
-    assert "🚀 Release 2024.1.0" in notes
-    assert "- First commit" in notes
-    assert "- Second commit" in notes
-    assert DEFAULT_FOOTER in notes
+
+    # Check the main structure
+    assert "# Release 2024.1.0" in notes
+    assert "## 📊 Statistics" in notes
+    assert "## 📝 Changes" in notes
+
+    # Check the commit messages
+    assert "First commit" in notes
+    assert "Second commit" in notes
+
+    # Check statistics
+    assert "**2** commits" in notes  # 2 commits from the commit_messages
+    assert "**0** contributors" in notes  # 0 because no author information without repo
+
+    # Check footer
+    footer_content = "🙏 Thank you for using this project! Please report any issues or feedback on the GitHub repository"  # noqa: E501
+    assert footer_content in notes
+
+    # Now test with actual repo
+    # Create two more commits with different authors
+    dummy_file2 = Path(git_repo.working_dir) / "file2.txt"
+    dummy_file2.write_text("Second file")
+    git_repo.index.add([str(dummy_file2)])
+    git_repo.config_writer().set_value("user", "name", "John Doe").release()
+    git_repo.index.commit("First commit")
+
+    dummy_file3 = Path(git_repo.working_dir) / "file3.txt"
+    dummy_file3.write_text("Third file")
+    git_repo.index.add([str(dummy_file3)])
+    git_repo.config_writer().set_value("user", "name", "Jane Doe").release()
+    git_repo.index.commit("Second commit")
+
+    notes_with_repo = _format_release_notes(
+        commit_messages,
+        version,
+        DEFAULT_FOOTER,
+        repo=git_repo,
+    )
+
+    # Check if contributors section exists
+    assert "## 👥 Contributors" in notes_with_repo
+    assert "@johndoe" in notes_with_repo
+    assert "@janedoe" in notes_with_repo
+
+    # Check statistics with actual commits
+    assert "**3** commits" in notes_with_repo  # Initial + 2 new commits
+    assert "**3** contributors" in notes_with_repo  # Test User + John Doe + Jane Doe
 
 
 def test_should_skip_release(git_repo: git.Repo) -> None:
