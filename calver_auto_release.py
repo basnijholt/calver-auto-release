@@ -29,7 +29,7 @@ DEFAULT_FOOTER = (
     "or feedback on the GitHub repository."
 )
 
-console = Console()
+console = Console(soft_wrap=True)
 
 
 def create_release(
