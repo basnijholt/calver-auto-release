@@ -27,6 +27,8 @@ By automatically creating a release on every commit to your main branch, you ens
 >
 > Configure this in your GitHub repository settings under "Pull Requests" → "Allow squash merging" and uncheck other merge methods.
 
+<img width="700" alt="calver" src="https://github.com/user-attachments/assets/2a1414fd-0aef-4a53-a773-357b7ab39d50">
+
 
 <details>
 <summary>ToC</summary>
