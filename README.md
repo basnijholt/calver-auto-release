@@ -1,6 +1,7 @@
 # calver-auto-release 🏷️
 [![PyPI](https://img.shields.io/pypi/v/calver-auto-release)](https://pypi.org/project/calver-auto-release/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/calver-auto-release)](https://pypi.org/project/calver-auto-release/)
+[![Coverage](https://img.shields.io/codecov/c/github/basnijholt/calver-auto-release)](https://codecov.io/gh/basnijholt/calver-auto-release)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pytest](https://github.com/basnijholt/calver-auto-release/actions/workflows/pytest.yml/badge.svg)](https://github.com/basnijholt/calver-auto-release/actions/workflows/pytest.yml)
 
