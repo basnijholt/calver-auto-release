@@ -54,12 +54,11 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        uv venv
         if [ -f "pyproject.toml" ] && grep -q "name = \"calver-auto-release\"" pyproject.toml; then
-          uv pip install -e .
+          uv tool install .
         else
           # In production, install from PyPI
-          uv pip install calver-auto-release
+          uv tool install calver-auto-release
         fi
 
     - name: Generate new version
@@ -69,9 +68,7 @@ runs:
         SKIP_PATTERNS: ${{ inputs.skip_patterns }}
         FOOTER: ${{ inputs.footer }}
         CALVER_DRY_RUN: ${{ inputs.dry_run }}
-      run: |
-        source .venv/bin/activate
-        calver-auto-release
+      run: calver-auto-release
 
     - name: Get Tag Message
       if: steps.generate_version.outputs.version != '' && inputs.dry_run != 'true' && inputs.release_notes_type == 'tag_message'
