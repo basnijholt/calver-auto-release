@@ -31,3 +31,9 @@ jobs:
         run: |
           source .venv/bin/activate
           pytest
+ 
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
