@@ -1,0 +1,8 @@
+# Pytest already enforces whole-project coverage with --cov-fail-under.
+# Keep Codecov's required signal focused on coverage for changed lines.
+coverage:
+  status:
+    project: off
+    patch:
+      default:
+        target: auto
