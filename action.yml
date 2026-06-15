@@ -2,8 +2,12 @@ name: "CalVer Auto Release"
 description: "Automatically create GitHub releases using Calendar Versioning (CalVer)"
 inputs:
   github_token:
-    description: "GitHub token for creating releases"
+    description: "GitHub token for pushing release tags and creating releases"
     required: true
+  release_token:
+    description: "Optional token to use for pushing release tags and creating releases; use a PAT or GitHub App token when downstream workflows must run from release/tag events"
+    required: false
+    default: ""
   skip_patterns:
     description: "Comma-separated list of patterns to skip releases"
     required: false
@@ -44,7 +48,7 @@ runs:
     - name: Configure Git
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ inputs.release_token || inputs.github_token }}
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@users.noreply.github.com"
@@ -87,4 +91,4 @@ runs:
         generate_release_notes: ${{ inputs.release_notes_type == 'github' }}
         body: ${{ inputs.release_notes_type == 'tag_message' && steps.tag_message.outputs.content || '' }}
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ inputs.release_token || inputs.github_token }}

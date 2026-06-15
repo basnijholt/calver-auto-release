@@ -24,6 +24,8 @@ def test_action_yml_structure() -> None:
     # Verify inputs
     assert "github_token" in action["inputs"]
     assert action["inputs"]["github_token"]["required"] is True
+    assert "release_token" in action["inputs"]
+    assert action["inputs"]["release_token"]["required"] is False
 
     # Verify it's a composite action
     assert action["runs"]["using"] == "composite"
