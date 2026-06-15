@@ -15,6 +15,7 @@ from calver_auto_release import (
     DEFAULT_FOOTER,
     DEFAULT_SKIP_PATTERNS,
     _format_release_notes,
+    _get_commit_messages_since_last_release,
     _get_new_version,
     _should_skip_release,
     cli,
@@ -50,9 +51,18 @@ def git_repo(tmp_path: Path) -> git.Repo:
 def git_repo_with_tag(git_repo: git.Repo) -> git.Repo:
     """Create a temporary git repository with a tag."""
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    tag_name = f"{now.year}.{now.month}.0"
+    tag_name = f"v{now.year}.{now.month}.0"
     git_repo.create_tag(tag_name, message=f"Release {tag_name}")
     return git_repo
+
+
+def _commit_file(repo: git.Repo, message: str) -> None:
+    """Append to a tracked file and commit it."""
+    history = Path(repo.working_dir) / "history.txt"
+    existing = history.read_text() if history.exists() else ""
+    history.write_text(f"{existing}{message}\n")
+    repo.index.add([str(history)])
+    repo.index.commit(message)
 
 
 def test_create_release_basic(git_repo: git.Repo) -> None:
@@ -104,6 +114,15 @@ def test_create_release_already_tagged(git_repo_with_tag: git.Repo) -> None:
     """Test when commit is already tagged."""
     version = create_release(repo_path=git_repo_with_tag.working_dir)
     assert version is None
+
+
+def test_create_release_ignores_non_release_tag_on_head(git_repo: git.Repo) -> None:
+    """Test that non-CalVer tags on HEAD do not block a release."""
+    git_repo.create_tag("build-artifact")
+
+    version = create_release(repo_path=git_repo.working_dir, dry_run=True)
+
+    assert version is not None
 
 
 def test_create_release_custom_footer(git_repo: git.Repo) -> None:
@@ -255,6 +274,58 @@ def test_get_new_version_no_tags(git_repo: git.Repo) -> None:
     version = _get_new_version(git_repo)
     now = datetime.datetime.now(tz=datetime.timezone.utc)
     assert version == f"v{now.year}.{now.month}.0"
+
+
+def test_get_new_version_ignores_branch_specific_tags(git_repo: git.Repo) -> None:
+    """Branch-specific tags must not reset the patch counter or release boundary."""
+    base_branch = git_repo.active_branch.name
+
+    git_repo.create_tag("v2026.6.142", message="Release v2026.6.142")
+    _commit_file(git_repo, "Make SaaS API type check portable (#1287)")
+    git_repo.create_tag("v2026.6.143", message="Release v2026.6.143")
+
+    git_repo.git.checkout("-b", "hotfix/sso-cookie-domain")
+    _commit_file(git_repo, "Regenerate SaaS API schema for SSO hotfix")
+    git_repo.create_tag("v2026.6.142-sso-cookie.2")
+    git_repo.git.checkout(base_branch)
+
+    _commit_file(git_repo, "List unstructured file memories (#1286)")
+
+    version = _get_new_version(git_repo, today=datetime.date(2026, 6, 15))
+    commit_messages = _get_commit_messages_since_last_release(git_repo)
+
+    assert version == "v2026.6.144"
+    assert "List unstructured file memories (#1286)" in commit_messages
+    assert "Make SaaS API type check portable (#1287)" not in commit_messages
+    assert "Regenerate SaaS API schema for SSO hotfix" not in commit_messages
+
+
+def test_get_new_version_skips_exact_tag_from_unmerged_branch(git_repo: git.Repo) -> None:
+    """A release candidate must never collide with any exact CalVer tag."""
+    base_branch = git_repo.active_branch.name
+
+    git_repo.create_tag("v2026.6.143", message="Release v2026.6.143")
+    git_repo.git.checkout("-b", "release-candidate")
+    _commit_file(git_repo, "Candidate build")
+    git_repo.create_tag("v2026.6.144")
+    git_repo.git.checkout(base_branch)
+    _commit_file(git_repo, "Mainline fix")
+
+    version = _get_new_version(git_repo, today=datetime.date(2026, 6, 15))
+    commit_messages = _get_commit_messages_since_last_release(git_repo)
+
+    assert version == "v2026.6.145"
+    assert "Mainline fix" in commit_messages
+    assert "Candidate build" not in commit_messages
+
+
+def test_get_new_version_handles_zero_padded_existing_tag(git_repo: git.Repo) -> None:
+    """Zero-padded month tags should still reserve their parsed version tuple."""
+    git_repo.create_tag("v2026.06.1", message="Release v2026.06.1")
+
+    version = _get_new_version(git_repo, today=datetime.date(2026, 6, 15))
+
+    assert version == "v2026.6.2"
 
 
 def test_cli(git_repo: git.Repo, capsys: pytest.CaptureFixture) -> None:

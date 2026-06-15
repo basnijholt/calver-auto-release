@@ -7,13 +7,14 @@ GitHub releases with automatically generated release notes.
 
 from __future__ import annotations
 
+import argparse
 import datetime
-import operator
 import os
+import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import git
-from packaging import version
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
@@ -28,8 +29,19 @@ DEFAULT_FOOTER = (
     "\n\n🙏 Thank you for using this project! Please report any issues "
     "or feedback on the GitHub repository."
 )
+RELEASE_TAG_RE = re.compile(r"^v(?P<year>\d{4})\.(?P<month>0?[1-9]|1[0-2])\.(?P<patch>\d+)$")
 
 console = Console(soft_wrap=True)
+
+
+@dataclass(frozen=True)
+class ReleaseTag:
+    """Parsed exact CalVer release tag."""
+
+    name: str
+    year: int
+    month: int
+    patch: int
 
 
 def create_release(
@@ -134,8 +146,11 @@ def _display_release_info(
 
 
 def _is_already_tagged(repo: git.Repo) -> bool:
-    """Check if the current commit is already tagged."""
-    return bool(repo.git.tag(points_at="HEAD"))
+    """Check if the current commit already has an exact release tag."""
+    return any(
+        _parse_release_tag(tag_name) is not None
+        for tag_name in repo.git.tag(points_at="HEAD").splitlines()
+    )
 
 
 def _should_skip_release(repo: git.Repo, skip_patterns: Sequence[str]) -> bool:
@@ -144,26 +159,60 @@ def _should_skip_release(repo: git.Repo, skip_patterns: Sequence[str]) -> bool:
     return any(pattern in commit_message for pattern in skip_patterns)
 
 
-def _get_new_version(repo: git.Repo) -> str:
+def _parse_release_tag(tag_name: str) -> ReleaseTag | None:
+    """Parse an exact CalVer release tag."""
+    match = RELEASE_TAG_RE.match(tag_name)
+    if match is None:
+        return None
+    return ReleaseTag(
+        name=tag_name,
+        year=int(match.group("year")),
+        month=int(match.group("month")),
+        patch=int(match.group("patch")),
+    )
+
+
+def _all_exact_release_tags(repo: git.Repo) -> list[ReleaseTag]:
+    """Return all tags that exactly match the CalVer release format."""
+    return [
+        release_tag
+        for tag in repo.tags
+        if (release_tag := _parse_release_tag(tag.name)) is not None
+    ]
+
+
+def _tag_commit_is_ancestor(repo: git.Repo, tag_name: str) -> bool:
+    """Return whether a tag's target commit is reachable from HEAD."""
+    try:
+        repo.git.merge_base("--is-ancestor", f"{tag_name}^{{}}", "HEAD")
+    except git.exc.GitCommandError:
+        return False
+    return True
+
+
+def _latest_reachable_release_tag(repo: git.Repo) -> ReleaseTag | None:
+    """Return the highest exact release tag reachable from HEAD."""
+    reachable_tags = [
+        tag for tag in _all_exact_release_tags(repo) if _tag_commit_is_ancestor(repo, tag.name)
+    ]
+    if not reachable_tags:
+        return None
+    return max(reachable_tags, key=lambda tag: (tag.year, tag.month, tag.patch))
+
+
+def _get_new_version(repo: git.Repo, today: datetime.date | None = None) -> str:
     """Get the new version number.
 
     Returns a version string in the format vYYYY.MM.PATCH, e.g., v2024.3.1
     """
-    try:
-        latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
-        # Remove 'v' prefix for version parsing
-        last_version = version.parse(latest_tag.name.lstrip("v"))
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
-        patch = (
-            last_version.micro + 1
-            if last_version.major == now.year and last_version.minor == now.month
-            else 0
-        )
-    except ValueError:  # No tags exist
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
-        patch = 0
+    today = today or datetime.datetime.now(tz=datetime.timezone.utc).date()
+    release_tags = _all_exact_release_tags(repo)
+    current_month_patches = [
+        tag.patch for tag in release_tags if tag.year == today.year and tag.month == today.month
+    ]
+    patch = max(current_month_patches, default=-1) + 1
 
-    return f"v{now.year}.{now.month}.{patch}"
+    return f"v{today.year}.{today.month}.{patch}"
 
 
 def _set_author(repo: git.Repo) -> None:
@@ -194,11 +243,10 @@ def _push_tag(repo: git.Repo, new_version: str) -> None:
 
 def _get_commit_messages_since_last_release(repo: git.Repo) -> str:
     """Get the commit messages since the last release."""
-    try:
-        latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
-        return repo.git.log(f"{latest_tag}..HEAD", "--pretty=format:%s")  # type: ignore[no-any-return]
-    except ValueError:  # No tags exist
+    latest_tag = _latest_reachable_release_tag(repo)
+    if latest_tag is None:
         return repo.git.log("--pretty=format:%s")  # type: ignore[no-any-return]
+    return repo.git.log(f"{latest_tag.name}..HEAD", "--pretty=format:%s")  # type: ignore[no-any-return]
 
 
 def _get_commit_details(repo: git.Repo, since_ref: str | None = None) -> list[tuple[str, str, str]]:
@@ -243,8 +291,7 @@ def _format_release_notes(
     if repo is not None:
         try:
             remote_url = repo.remote("origin").url
-            if remote_url.endswith(".git"):
-                remote_url = remote_url[:-4]
+            remote_url = remote_url.removesuffix(".git")
             if "github.com" in remote_url:
                 repo_url = remote_url.replace("git@github.com:", "https://github.com/")
         except (git.exc.GitCommandError, ValueError):
@@ -256,10 +303,11 @@ def _format_release_notes(
     unique_authors = set()
     if repo is not None:
         try:
-            latest_tag = max(repo.tags, key=operator.attrgetter("commit.committed_datetime"))
-            commits_info = _get_commit_details(repo, latest_tag.name)
-        except ValueError:  # No tags exist
-            commits_info = _get_commit_details(repo)
+            latest_tag = _latest_reachable_release_tag(repo)
+            commits_info = _get_commit_details(
+                repo,
+                latest_tag.name if latest_tag is not None else None,
+            )
         except git.exc.GitCommandError:
             # Fallback to simple commit messages if git commands fail
             commits_info = [("", "", msg) for msg in commit_messages.split("\n") if msg]
@@ -309,8 +357,6 @@ def _format_release_notes(
 
 def cli() -> None:
     """Command-line interface for calver-auto-release."""
-    import argparse
-
     parser = argparse.ArgumentParser(description="Create a new release with CalVer format.")
     parser.add_argument(
         "--repo-path",
