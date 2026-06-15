@@ -85,7 +85,7 @@ runs:
 
     - name: Create GitHub Release
       if: steps.generate_version.outputs.version != '' && inputs.dry_run != 'true'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ steps.generate_version.outputs.version }}
         generate_release_notes: ${{ inputs.release_notes_type == 'github' }}
