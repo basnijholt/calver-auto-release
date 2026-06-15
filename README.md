@@ -147,15 +147,17 @@ The action creates a new release with CalVer versioning, and you can optionally 
 
 > [!IMPORTANT]
 > The `secrets.GITHUB_TOKEN` variable is automatically populated (see [docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication)).
-> However, releases created using `GITHUB_TOKEN` will not trigger other workflows that run on the `release` event.
-> If you need to trigger other workflows when a release is created, you'll need to:
-> 1. Create a Personal Access Token (PAT) with `contents: write` permissions at https://github.com/settings/tokens
-> 2. Add it to your repository secrets (e.g., as `PAT`)
-> 3. Use it in the workflow:
+> It is enough when this action only needs to create a tag/release, or when later publish steps run in the same workflow job.
+> However, tags and releases created using `GITHUB_TOKEN` will not trigger other workflows that run on `push`, `create`, or `release` events.
+> If you need downstream workflows to run when a tag or release is created, you'll need to:
+> 1. Create a Personal Access Token (PAT) with `contents: write` permissions at https://github.com/settings/tokens, or create an equivalent GitHub App token.
+> 2. Add it to your repository secrets (e.g., as `RELEASE_TOKEN`).
+> 3. Pass it as `release_token`:
 >    ```yaml
 >    - uses: basnijholt/calver-auto-release@v1
 >      with:
->        github_token: ${{ secrets.PAT }}  # Instead of secrets.GITHUB_TOKEN
+>        github_token: ${{ secrets.GITHUB_TOKEN }}
+>        release_token: ${{ secrets.RELEASE_TOKEN }}
 >    ```
 
 ### CLI Usage

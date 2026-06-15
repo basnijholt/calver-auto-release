@@ -193,6 +193,53 @@ def test_format_release_notes(git_repo: git.Repo) -> None:
     assert "**3** contributors" in notes_with_repo  # Test User + John Doe + Jane Doe
 
 
+def test_format_release_notes_links_github_commits(git_repo: git.Repo) -> None:
+    """Test that GitHub remotes produce linked commit entries."""
+    git_repo.remote("origin").set_url("git@github.com:example/project.git")
+
+    notes = _format_release_notes(
+        "Initial commit",
+        "v2024.1.0",
+        "",
+        repo=git_repo,
+    )
+
+    commit_hash = git_repo.head.commit.hexsha[:7]
+    assert f"https://github.com/example/project/commit/{commit_hash}" in notes
+    assert "[Initial commit]" in notes
+
+
+def test_format_release_notes_without_remote(git_repo: git.Repo) -> None:
+    """Test release notes formatting when no origin remote exists."""
+    git_repo.delete_remote("origin")
+
+    notes = _format_release_notes(
+        "Initial commit",
+        "v2024.1.0",
+        "",
+        repo=git_repo,
+    )
+
+    assert "- Initial commit" in notes
+
+
+def test_format_release_notes_falls_back_on_git_log_error(git_repo_with_tag: git.Repo) -> None:
+    """Test fallback to simple commit messages when detailed git log fails."""
+    with patch(
+        "calver_auto_release._get_commit_details",
+        side_effect=git.exc.GitCommandError("git log", 1),
+    ):
+        notes = _format_release_notes(
+            "Fallback commit",
+            "v2024.1.0",
+            "",
+            repo=git_repo_with_tag,
+        )
+
+    assert "- Fallback commit" in notes
+    assert "**1** commits" in notes
+
+
 def test_should_skip_release(git_repo: git.Repo) -> None:
     """Test skip release detection."""
     for pattern in DEFAULT_SKIP_PATTERNS:
